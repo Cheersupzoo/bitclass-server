@@ -82,6 +82,38 @@ export class ClassController {
       );
   }
 
+  async addStudentToClass(req, res) {
+    let jwt = JWTService.getUIDFromJWT(req);
+    var uid = jwt.uid;
+    var user = this.firebase_users.doc(jwt.uid);
+
+    const errors = validationResult(req);
+    let cid = req.params.id.trim();
+    var class_fb = this.firebase_classes.doc(cid);
+    var classroom = (await class_fb.get()).data();
+    let data = req.body;
+    classroom.student = [...classroom.student, uid];
+    classroom.lastEditTime = new Date();
+    await class_fb.update(classroom);
+
+    var user_data = (await user.get()).data();
+    if(!user_data.classes) user_data.classes = [];
+    user_data.classes = [...user_data.classes,cid]
+    user.update({
+      classes: user_data.classes
+    });
+
+    log(chalk.blue.bgGreenBright.bold("addStudentClass!"));
+    if (!errors.isEmpty()) {
+      return res.status(402).send(reqResponse.errorResponse(402));
+    }
+    return res
+      .status(200)
+      .send(
+        reqResponse.successResponse(200, "addStudentClass", req.params.id.trim())
+      );
+  }
+
   //  async getClass(req, res) {
   //   var classs = this.firebase_classes;
   //   var doc = await classs.get();

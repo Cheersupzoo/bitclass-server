@@ -14,6 +14,13 @@ router.post(
   }
 );
 
+router.post(
+  "/class/:id/addstudent",
+  JWTService.requireJWTAuth,
+  (req, res) => {
+    class_controller.addStudentToClass(req, res);
+  }
+);
 router.put(
   "/class/:id",
   JWTService.requireJWTAuth,
