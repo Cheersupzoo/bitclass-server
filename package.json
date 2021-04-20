@@ -23,6 +23,7 @@
     "express": "4.17.1",
     "express-validator": "^6.9.2",
     "firebase-admin": "^9.4.2",
+    "glob": "^7.1.6",
     "jsonwebtoken": "^8.5.1",
     "jwt-simple": "^0.5.6",
     "nanoid": "^3.1.22",
