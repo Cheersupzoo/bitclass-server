@@ -14,6 +14,9 @@ router.post("/auth/signup", (req, res) => {
   auth_controller.signup(req, res);
 });
 
+router.get("/auth/user/:id", JWTService.requireJWTAuth, (req, res) => {
+  auth_controller.getUserById(req, res);
+});
 router.get("/auth/user", JWTService.requireJWTAuth, (req, res) => {
   auth_controller.getUser(req, res);
 });
