@@ -24,7 +24,7 @@ app.use(
 require("./routes")(app);
 // const dir = path.join(__dirname, 'assets');
 
-const port = 4000;
+const port = (process.env.PORT || 4000);
 const start = () =>
   app.listen(port, () => {
     console.log(chalk.yellow("......................................."));
