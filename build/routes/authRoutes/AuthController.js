@@ -183,6 +183,22 @@ class AuthController {
     return res.status(200).send(reqResponse.successResponse(200, "Signin success", user_data));
   }
 
+  async getUserById(req, res) {
+    const errors = validationResult(req);
+    let id = req.params.id.trim();
+
+    if (!errors.isEmpty()) {
+      return res.status(402).send(reqResponse.errorResponse(402));
+    }
+
+    let jwt = _jwt.JWTService.getUIDFromJWT(req);
+
+    var user = await this.firebase_user.doc(id).get();
+    let user_data = user.data();
+    console.log(user_data);
+    return res.status(200).send(reqResponse.successResponse(200, "Signin success", user_data));
+  }
+
 }
 
 exports.AuthController = AuthController;

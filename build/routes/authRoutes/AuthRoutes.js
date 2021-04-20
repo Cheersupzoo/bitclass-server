@@ -19,6 +19,9 @@ router.post("/auth/signin", (req, res) => {
 router.post("/auth/signup", (req, res) => {
   auth_controller.signup(req, res);
 });
+router.get("/auth/user/:id", _jwt.JWTService.requireJWTAuth, (req, res) => {
+  auth_controller.getUserById(req, res);
+});
 router.get("/auth/user", _jwt.JWTService.requireJWTAuth, (req, res) => {
   auth_controller.getUser(req, res);
 });
