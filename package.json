@@ -4,8 +4,10 @@
   "description": "",
   "main": "server.js",
   "scripts": {
-    "start": "nodemon src/server.js --exec babel-node -e js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "nodemon src/server.js --exec babel-node -e js",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "babel src -d build",
+    "start": "node ./build/server.js"
   },
   "keywords": [],
   "author": "",

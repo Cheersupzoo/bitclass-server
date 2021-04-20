@@ -1,0 +1,216 @@
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.ClassController = void 0;
+
+var _chalk = _interopRequireDefault(require("chalk"));
+
+var _firebase = require("../../services/firebase");
+
+var _jwt = require("../../services/jwt");
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
+
+const {
+  nanoid
+} = require("nanoid");
+
+const reqResponse = require("../../cors/responseHandler");
+
+const {
+  validationResult
+} = require("express-validator");
+
+const log = console.log;
+
+class ClassController {
+  constructor() {
+    _defineProperty(this, "firebaseService", _firebase.FirebaseService.firebaseService);
+
+    _defineProperty(this, "firebase_classes", this.firebaseService.firestore.collection("classes"));
+
+    _defineProperty(this, "firebase_users", this.firebaseService.firestore.collection("users"));
+
+    _defineProperty(this, "bucket", this.firebaseService.bucket);
+  }
+
+  async createClass(req, res) {
+    let jwt = _jwt.JWTService.getUIDFromJWT(req);
+
+    var user = this.firebase_users.doc(jwt.uid); // if (user.data().role != "admin") {
+    //   return res.status(402).send(reqResponse.errorResponse(402));
+    // }
+
+    const errors = validationResult(req);
+
+    if (!errors.isEmpty()) {
+      return res.status(402).send(reqResponse.errorResponse(402));
+    } // console.log(chalk.blue(`${JSON.stringify(req.body)}`))
+
+
+    var body = req.body;
+    var classroom = {};
+    classroom.cid = nanoid(8);
+    classroom.name = body.name;
+    classroom.code = body.code;
+    classroom.section = body.section;
+    classroom.createdTime = new Date();
+    classroom.lastEditTime = new Date();
+    classroom.owner = jwt.uid;
+    classroom.student = [];
+    var save_class = await this.firebase_classes.doc(classroom.cid);
+    save_class.create(classroom);
+    let user_data = await user.get();
+    let user_classes = user_data.data().classes;
+
+    if (!user_classes) {
+      user_classes = [classroom.cid];
+    } else {
+      user_classes.push(classroom.cid);
+    }
+
+    await user.update({
+      classes: user_classes
+    });
+
+    try {
+      log(_chalk.default.blue.bgGreenBright.bold("createClass!"));
+      res.status(200).send(reqResponse.successResponse(200, "Class Created", save_class.id));
+    } catch (error) {
+      console.error(error);
+      res.status(502).send(reqResponse.errorResponse(502));
+    }
+  }
+
+  async updateClass(req, res) {
+    let jwt = _jwt.JWTService.getUIDFromJWT(req);
+
+    var user = await this.firebase_users.doc(jwt.uid).get();
+    const errors = validationResult(req);
+    var class_fb = this.firebase_classes.doc(req.params.id.trim());
+    var classroom = (await class_fb.get()).data();
+    let data = req.body;
+    classroom.code = data["code"] || classroom.code;
+    classroom.name = data["name"] || classroom.name;
+    classroom.section = data["section"] || classroom.section;
+    classroom.lastEditTime = new Date();
+    await class_fb.update(classroom);
+    log(_chalk.default.blue.bgGreenBright.bold("updateClass!"));
+
+    if (!errors.isEmpty()) {
+      return res.status(402).send(reqResponse.errorResponse(402));
+    }
+
+    return res.status(200).send(reqResponse.successResponse(200, "updateClass", req.params.id.trim()));
+  }
+
+  async addStudentToClass(req, res) {
+    let jwt = _jwt.JWTService.getUIDFromJWT(req);
+
+    var uid = jwt.uid;
+    var user = this.firebase_users.doc(jwt.uid);
+    const errors = validationResult(req);
+    let cid = req.params.id.trim();
+    var class_fb = this.firebase_classes.doc(cid);
+    var classroom = (await class_fb.get()).data();
+    let data = req.body;
+    classroom.student = [...classroom.student, uid];
+    classroom.lastEditTime = new Date();
+    await class_fb.update(classroom);
+    var user_data = (await user.get()).data();
+    if (!user_data.classes) user_data.classes = [];
+    user_data.classes = [...user_data.classes, cid];
+    user.update({
+      classes: user_data.classes
+    });
+    log(_chalk.default.blue.bgGreenBright.bold("addStudentClass!"));
+
+    if (!errors.isEmpty()) {
+      return res.status(402).send(reqResponse.errorResponse(402));
+    }
+
+    return res.status(200).send(reqResponse.successResponse(200, "addStudentClass", req.params.id.trim()));
+  } //  async getClass(req, res) {
+  //   var classs = this.firebase_classes;
+  //   var doc = await classs.get();
+  //   if (doc.empty) {
+  //     console.log("No such document!");
+  //   } else {
+  //     console.log("Document data:");
+  //     var docs = doc.docs.map((e) => {
+  //       console.log(`${e.id} ${e.get("title")}`);
+  //       return plainToClass(Class, e.data());
+  //     });
+  //     return res
+  //       .status(200)
+  //       .send(reqResponse.successResponse(200, "success", docs));
+  //   }
+  //   const errors = validationResult(req);
+  //   if (!errors.isEmpty()) {
+  //     return res.status(402).send(reqResponse.errorResponse(402));
+  //   }
+  //   log(chalk.blue.bgGreenBright.bold("getClass!"));
+  //   return res.status(200).send(reqResponse.successResponse(200, "getClass"));
+  // }
+
+
+  async getClassById(req, res) {
+    log(_chalk.default.blue.bgGreenBright.bold("getClass!"));
+    console.log(req.params.id.trim());
+    var classs = this.firebase_classes.doc(req.params.id.trim());
+    var doc = await classs.get();
+
+    if (!doc.exists) {
+      console.log("No such document!");
+      return res.status(200).send(reqResponse.successResponse(200, "getClass", "Class not exist"));
+    } else {
+      console.log("Document data:");
+      console.log(`${doc.id} ${doc.get("name")}`);
+      let classroom = doc.data();
+      return res.status(200).send(reqResponse.successResponse(200, "success", classroom));
+    }
+  }
+
+  async deleteClass(req, res) {
+    let jwt = _jwt.JWTService.getUIDFromJWT(req);
+
+    var cid = req.params.id.trim();
+    var classs = this.firebase_classes.doc(req.params.id.trim());
+    var classes_data = (await classs.get()).data();
+    var sid = classes_data.owner;
+    var user = this.firebase_users.doc(sid);
+    var user_data = (await user.get()).data();
+    var user_classes = user_data.classes.filter(any_id => any_id != cid);
+    user.update({
+      classes: user_classes
+    });
+
+    if (classes_data.student) {
+      await Promise.all(classes_data.student.map(async sid => {
+        var user = this.firebase_users.doc(sid);
+        var user_data = (await user.get()).data();
+        var user_classes = user_data.classes.filter(any_id => any_id != cid);
+        user.update({
+          classes: user_classes
+        });
+      }));
+    }
+
+    await classs.delete();
+    const errors = validationResult(req);
+
+    if (!errors.isEmpty()) {
+      return res.status(402).send(reqResponse.errorResponse(402));
+    }
+
+    log(_chalk.default.blue.bgGreenBright.bold("deleteClass!"));
+    return res.status(200).send(reqResponse.successResponse(200, "deleteClass success", req.params.id.trim()));
+  }
+
+}
+
+exports.ClassController = ClassController;
